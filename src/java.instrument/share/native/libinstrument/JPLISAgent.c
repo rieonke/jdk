@@ -27,6 +27,9 @@
  * Copyright 2003 Wily Technology, Inc.
  */
 
+# include <sys/time.h>
+# include <sys/times.h>
+# include <sys/types.h>
 #include    <jni.h>
 #include    <jvm.h>
 #include    <jvmti.h>
@@ -858,6 +861,15 @@ transformClassFile(             JPLISAgent *            agent,
             }
             jplis_assert(agent->mInstrumentationImpl != NULL);
             jplis_assert(agent->mTransform != NULL);
+
+            struct timeval time;
+            long start_time;
+            long end_time;
+            int status;
+
+            status = gettimeofday(&time, NULL);
+            start_time = (time.tv_sec) * 1000  + (time.tv_usec / 1000);
+
             transformedBufferObject = (*jnienv)->CallObjectMethod(
                                                 jnienv,
                                                 agent->mInstrumentationImpl,
@@ -869,6 +881,12 @@ transformClassFile(             JPLISAgent *            agent,
                                                 protectionDomain,
                                                 classFileBufferObject,
                                                 is_retransformer);
+
+            status = gettimeofday(&time, NULL);
+            end_time = (time.tv_sec) * 1000  + (time.tv_usec / 1000);
+            fprintf(stdout, "M_CALL_INSTRU_IMPL{ time: %lums, name: %s }\n", end_time - start_time, name);
+
+
             errorOutstanding = checkForAndClearThrowable(jnienv);
             jplis_assert_msg(!errorOutstanding, "transform method call failed");
         }

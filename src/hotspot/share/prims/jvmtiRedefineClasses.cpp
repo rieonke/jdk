@@ -216,17 +216,22 @@ void VM_RedefineClasses::doit() {
   HandleMark hm(thread);   // make sure any handles created are deleted
                            // before the stack walk again.
 
-  for (int i = 0; i < _class_count; i++) {
-    redefine_single_class(_class_defs[i].klass, _scratch_classes[i], thread);
-  }
+    long start_time = os::javaTimeMillis();
 
-  // Flush all compiled code that depends on the classes redefined.
-  flush_dependent_code();
+    for (int i = 0; i < _class_count; i++) {
+        redefine_single_class(_class_defs[i].klass, _scratch_classes[i], thread);
+    }
 
-  // Adjust constantpool caches and vtables for all classes
-  // that reference methods of the evolved classes.
-  // Have to do this after all classes are redefined and all methods that
-  // are redefined are marked as old.
+    long end_time = os::javaTimeMillis();
+    fprintf(stdout, "M_REDEFINE{ time: %lums }\n", end_time - start_time);
+
+    // Flush all compiled code that depends on the classes redefined.
+    flush_dependent_code();
+
+    // Adjust constantpool caches and vtables for all classes
+    // that reference methods of the evolved classes.
+    // Have to do this after all classes are redefined and all methods that
+    // are redefined are marked as old.
   AdjustAndCleanMetadata adjust_and_clean_metadata(thread);
   ClassLoaderDataGraph::classes_do(&adjust_and_clean_metadata);
 
@@ -1241,6 +1246,10 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
   // should not happen since we're trying to do a RedefineClasses
   guarantee(state != NULL, "exiting thread calling load_new_class_versions");
   for (int i = 0; i < _class_count; i++) {
+
+      long start_time = os::javaTimeMillis();
+
+
     // Create HandleMark so that any handles created while loading new class
     // versions are deleted. Constant pools are deallocated while merging
     // constant pools
@@ -1414,6 +1423,10 @@ jvmtiError VM_RedefineClasses::load_new_class_versions(TRAPS) {
 
     log_debug(redefine, class, load)
       ("loaded name=%s (avail_mem=" UINT64_FORMAT "K)", the_class->external_name(), os::available_memory() >> 10);
+
+    long end_time = os::javaTimeMillis();
+    fprintf(stdout, "M_LOAD_NEW_VERSION{ time: %lums, name: %s }\n", end_time - start_time, the_class->external_name());
+
   }
 
   return JVMTI_ERROR_NONE;
